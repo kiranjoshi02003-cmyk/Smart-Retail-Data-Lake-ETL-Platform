@@ -211,6 +211,65 @@ def get_validation_logs():
     except Exception as e:
         return jsonify({"status": "SUCCESS", "logs": []})
 
+@app.route("/api/ml/datasets", methods=["GET"])
+def list_ml_datasets():
+    """Returns available retail datasets for ML anomaly detection."""
+    try:
+        from etl.generate_retail_dataset import ensure_datasets_exist
+        from etl.config import ONLINE_RETAIL_CSV_PATH, SAMPLE_DIRTY_CSV_PATH
+        
+        ensure_datasets_exist()
+
+        def get_file_info(path, name, is_dirty=False):
+            if path.exists():
+                import pandas as pd
+                df = pd.read_csv(path)
+                return {
+                    "filename": name,
+                    "records": len(df),
+                    "size_kb": round(path.stat().st_size / 1024, 2),
+                    "is_dirty_sample": is_dirty
+                }
+            return {"filename": name, "records": 0, "size_kb": 0, "is_dirty_sample": is_dirty}
+
+        return jsonify({
+            "status": "SUCCESS",
+            "datasets": [
+                get_file_info(ONLINE_RETAIL_CSV_PATH, "online_retail.csv", False),
+                get_file_info(SAMPLE_DIRTY_CSV_PATH, "sample_dirty_data.csv", True)
+            ]
+        })
+    except Exception as e:
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+@app.route("/api/ml/anomaly-detect", methods=["POST"])
+def run_ml_anomaly_detection():
+    """
+    Triggers dynamic Isolation Forest training & evaluation on chosen retail dataset.
+    Accepts contamination rate, n_estimators, and random_state.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        contamination = float(data.get("contamination", 0.05))
+        n_estimators = int(data.get("n_estimators", 100))
+        random_state = int(data.get("random_state", 42))
+        dataset_name = data.get("dataset_name", "online_retail.csv")
+
+        logger.info(f"Running ML IsolationForest: dataset={dataset_name}, contamination={contamination}, n_estimators={n_estimators}, random_state={random_state}")
+
+        from etl.ml_anomaly import AnomalyDetectionEngine
+        engine = AnomalyDetectionEngine(
+            contamination=contamination,
+            n_estimators=n_estimators,
+            random_state=random_state
+        )
+        report = engine.train_and_predict(dataset_name=dataset_name)
+        return jsonify(report)
+    except Exception as e:
+        logger.error(f"ML Anomaly Detection failed: {str(e)}")
+        return jsonify({"status": "ERROR", "message": str(e)}), 500
+
+
 if __name__ == "__main__":
     try:
         execute_raw_sql("SELECT COUNT(*) FROM fact_sales")

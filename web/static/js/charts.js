@@ -67,3 +67,103 @@ function updateCurveChart(points) {
     curveChartInstance.update();
   }
 }
+
+/* ============================================================
+   ML ANOMALY DETECTION CHARTS
+   ============================================================ */
+let anomalyDistChartInstance = null;
+let anomalyCountryChartInstance = null;
+
+function renderAnomalyDistChart(distributionData) {
+  const canvas = document.getElementById('anomalyDistChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  if (anomalyDistChartInstance) {
+    anomalyDistChartInstance.destroy();
+  }
+
+  const labels = distributionData.map(b => `${b.bin_start}-${b.bin_end}`);
+  const counts = distributionData.map(b => b.count);
+
+  anomalyDistChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Transaction Count',
+        data: counts,
+        backgroundColor: distributionData.map(b => b.bin_end > 0.6 ? '#ff5364' : '#3b82f6'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => `Score Bin: ${items[0].label}`,
+            label: (item) => `Transactions: ${item.raw.toLocaleString()}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#8b8ea8', font: { family: 'JetBrains Mono', size: 9 } }
+        },
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#8b8ea8', font: { family: 'JetBrains Mono', size: 9 } }
+        }
+      }
+    }
+  });
+}
+
+function renderAnomalyCountryChart(countryData) {
+  const canvas = document.getElementById('anomalyCountryChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  if (anomalyCountryChartInstance) {
+    anomalyCountryChartInstance.destroy();
+  }
+
+  const labels = countryData.map(c => c.Country);
+  const counts = countryData.map(c => c.anomaly_count);
+
+  anomalyCountryChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'ML Anomalies',
+        data: counts,
+        backgroundColor: '#8b5cf6',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#8b8ea8', font: { family: 'JetBrains Mono', size: 9 } }
+        },
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.03)' },
+          ticks: { color: '#8b8ea8', font: { family: 'Inter', size: 10 } }
+        }
+      }
+    }
+  });
+}
+

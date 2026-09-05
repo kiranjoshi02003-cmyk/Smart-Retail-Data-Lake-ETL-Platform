@@ -32,6 +32,9 @@
         <button class="nav-tab-btn active" onclick="switchTab('dashboard')">
           <i class="fa-solid fa-chart-line"></i> Dashboard
         </button>
+        <button class="nav-tab-btn" id="tab-anomaly-btn" onclick="switchTab('anomaly')">
+          <i class="fa-solid fa-shield-cat"></i> Anomaly Detection
+        </button>
         <button class="nav-tab-btn" onclick="switchTab('medallion')">
           <i class="fa-solid fa-diagram-project"></i> Medallion ETL
         </button>
@@ -42,6 +45,7 @@
           <i class="fa-solid fa-database"></i> Schema Explorer
         </button>
       </div>
+
 
       <div class="nav-actions">
         <button class="run-btn" onclick="triggerEtl(false)">
@@ -243,24 +247,158 @@ ORDER BY sales_month ASC;
         </div>
 
         <!-- Panel 4: Schema Inspector -->
-        <div id="view-inspector" class="workspace-panel">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h3 style="font-size: 14px; font-weight: 700;">Data Lake Schema Browser</h3>
-            <select id="table-select" class="margin-pill" style="outline: none; cursor: pointer;" onchange="inspectSelectedTable()">
-              <option value="fact_sales">fact_sales (Gold Fact)</option>
-              <option value="dim_customers">dim_customers (Gold Dim)</option>
-              <option value="dim_products">dim_products (Gold Dim)</option>
-              <option value="silver_sales">silver_sales (Silver Clean)</option>
-              <option value="bronze_sales_raw">bronze_sales_raw (Bronze Staging)</option>
-            </select>
+        <!-- Panel 5: Anomaly Detection (UCI Online Retail + Isolation Forest) -->
+        <div id="view-anomaly" class="workspace-panel">
+          
+          <!-- Top Control Header Bar -->
+          <div class="ml-control-header">
+            <div>
+              <h3 style="font-size: 15px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-shield-cat" style="color: var(--accent-pink);"></i> 
+                ML Anomaly Detection & Data Quality System
+              </h3>
+              <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                Scikit-Learn Isolation Forest Engine on UCI Online Retail Dataset
+              </p>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <select id="ml-dataset-select" class="margin-pill" style="outline: none; cursor: pointer; padding: 7px 12px; border: 1px solid var(--border-color);" onchange="runAnomalyDetection()">
+                <option value="online_retail.csv">UCI Online Retail Dataset (online_retail.csv)</option>
+                <option value="sample_dirty_data.csv">Sample Dirty Demonstration Data (sample_dirty_data.csv)</option>
+              </select>
+
+              <button class="run-btn" style="padding: 8px 18px; font-size: 12px;" onclick="runAnomalyDetection()">
+                <i class="fa-solid fa-play"></i> Train & Run Model
+              </button>
+            </div>
           </div>
 
-          <div class="table-scroll" style="max-height: 260px;">
+          <!-- Model Hyperparameters Configuration Card -->
+          <div class="ml-hyperparam-card">
+            <div style="font-size: 11px; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-sliders"></i> Isolation Forest Hyperparameters
+            </div>
+
+            <div class="hyperparam-grid">
+              <div class="param-box">
+                <label>Contamination Rate (<span id="ml-contamination-val">0.05</span>)</label>
+                <input type="range" id="ml-contamination" min="0.01" max="0.20" step="0.01" value="0.05" oninput="document.getElementById('ml-contamination-val').innerText = this.value">
+              </div>
+              <div class="param-box">
+                <label>Number of Estimators (Trees)</label>
+                <input type="number" id="ml-n-estimators" class="param-input" min="10" max="300" value="100">
+              </div>
+              <div class="param-box">
+                <label>Random State Seed</label>
+                <input type="number" id="ml-random-state" class="param-input" value="42">
+              </div>
+            </div>
+          </div>
+
+          <!-- Executive Summary KPI Scorecards -->
+          <div class="ml-kpi-row">
+            <div class="ml-kpi-card">
+              <div class="kpi-title">TOTAL ANALYZED</div>
+              <div class="kpi-val" id="ml-kpi-total">-</div>
+              <div class="kpi-sub">Transactions Processed</div>
+            </div>
+            <div class="ml-kpi-card" style="border-left: 3px solid var(--accent-amber);">
+              <div class="kpi-title">DATA QUALITY ISSUES</div>
+              <div class="kpi-val" style="color: var(--accent-amber);" id="ml-kpi-dq-count">-</div>
+              <div class="kpi-sub">Rule-Based Violations</div>
+            </div>
+            <div class="ml-kpi-card" style="border-left: 3px solid var(--accent-pink);">
+              <div class="kpi-title">ML ANOMALIES</div>
+              <div class="kpi-val" style="color: var(--accent-pink);" id="ml-kpi-anomalies">-</div>
+              <div class="kpi-sub">Isolation Forest (-1)</div>
+            </div>
+            <div class="ml-kpi-card" style="border-left: 3px solid var(--accent-purple);">
+              <div class="kpi-title">ANOMALY RATE</div>
+              <div class="kpi-val" style="color: var(--accent-purple);" id="ml-kpi-pct">-</div>
+              <div class="kpi-sub">% Outlier Proportion</div>
+            </div>
+            <div class="ml-kpi-card" style="border-left: 3px solid var(--accent-cyan);">
+              <div class="kpi-title">AVG ANOMALY SCORE</div>
+              <div class="kpi-val" style="color: var(--accent-cyan);" id="ml-kpi-avg-score">-</div>
+              <div class="kpi-sub">Normalized Decision Scale</div>
+            </div>
+          </div>
+
+          <!-- Data Quality vs ML Anomaly Architecture Explanatory Cards -->
+          <div class="arch-separation-grid">
+            <div class="separation-card dq-card">
+              <div class="card-badge dq-badge"><i class="fa-solid fa-triangle-exclamation"></i> DATA QUALITY ISSUE</div>
+              <div class="card-desc">
+                Rule-based schema & data-formatting validation for explicit bugs: missing CustomerIDs, duplicate rows, invalid dates, missing descriptions, or negative quantities on sales.
+              </div>
+            </div>
+            <div class="separation-card ml-card">
+              <div class="card-badge ml-badge"><i class="fa-solid fa-brain"></i> ML-DETECTED ANOMALY</div>
+              <div class="card-desc">
+                Scikit-Learn Isolation Forest detection for multivariate numerical outliers: extreme total spend, unit price spikes, unusual customer purchase frequency, or rare transaction volume.
+              </div>
+            </div>
+          </div>
+
+          <!-- Visualizations Grid (Score Distribution & Country Breakdown) -->
+          <div class="ml-charts-grid">
+            <div class="chart-card">
+              <div class="chart-header">
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">ANOMALY SCORE DISTRIBUTION (HISTOGRAM)</span>
+              </div>
+              <div class="chart-canvas-box" style="height: 180px;">
+                <canvas id="anomalyDistChart"></canvas>
+              </div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-header">
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">ANOMALIES BY COUNTRY</span>
+              </div>
+              <div class="chart-canvas-box" style="height: 180px;">
+                <canvas id="anomalyCountryChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Suspicious Transactions Explorer Table Header & Filter -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0 0.5rem 0;">
+            <h4 style="font-size: 13px; font-weight: 700;">Suspicious Transactions & Outliers</h4>
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" id="ml-search-input" placeholder="Search invoice, customer, country..." class="sql-area" style="height: 32px; width: 220px; padding: 4px 10px;" oninput="filterMlTable()">
+              <select id="ml-status-filter" class="margin-pill" style="outline: none; cursor: pointer; padding: 4px 10px;" onchange="filterMlTable()">
+                <option value="ALL">All Transactions</option>
+                <option value="ML-DETECTED ANOMALY" selected>ML Anomalies Only</option>
+                <option value="DATA QUALITY ISSUE">Data Quality Issues Only</option>
+                <option value="NORMAL">Normal Transactions Only</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Suspicious Transactions Data Table -->
+          <div class="table-scroll" style="max-height: 280px;">
             <table class="dark-table">
-              <thead><tr id="inspector-table-head"><th>Loading...</th></tr></thead>
-              <tbody id="inspector-table-body"><tr><td>Select a table to view contents</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th>InvoiceNo</th>
+                  <th>Total ($)</th>
+                  <th>Quantity</th>
+                  <th>UnitPrice ($)</th>
+                  <th>Customer ID</th>
+                  <th>Country</th>
+                  <th>System Status</th>
+                  <th>Anomaly Score</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="ml-table-body">
+                <tr><td colspan="9" style="text-align: center; color: var(--text-muted);">Click 'Train & Run Model' to analyze dataset...</td></tr>
+              </tbody>
             </table>
           </div>
+
         </div>
 
       </div>
@@ -268,6 +406,20 @@ ORDER BY sales_month ASC;
     </div>
 
   </div>
+
+  <!-- Transaction Detail Modal / Drawer -->
+  <div id="transaction-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title" style="font-size: 15px; font-weight: 800;"><i class="fa-solid fa-magnifying-glass-chart"></i> Transaction Detail Inspection</h3>
+        <button class="modal-close-btn" onclick="closeTransactionModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body-content">
+        <!-- Dynamic Content injected via JS -->
+      </div>
+    </div>
+  </div>
+
 
   <!-- App Scripts -->
   <script src="{{ url_for('static', filename='js/charts.js') }}"></script>

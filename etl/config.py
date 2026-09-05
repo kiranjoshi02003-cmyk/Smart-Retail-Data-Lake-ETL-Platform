@@ -35,6 +35,8 @@ else:
 SALES_CSV_PATH = RAW_DATA_DIR / "sales_raw.csv"
 INVENTORY_XLSX_PATH = RAW_DATA_DIR / "inventory_raw.xlsx"
 CUSTOMERS_JSON_PATH = RAW_DATA_DIR / "customers_raw.json"
+ONLINE_RETAIL_CSV_PATH = DATA_DIR / "online_retail.csv"
+SAMPLE_DIRTY_CSV_PATH = DATA_DIR / "sample_dirty_data.csv"
 
 # Quality & Validation Rules
 VALIDATION_RULES = {
@@ -53,3 +55,20 @@ VALIDATION_RULES = {
         "valid_tiers": ["Bronze", "Silver", "Gold", "Platinum", "VIP"]
     }
 }
+
+# Machine Learning Anomaly Detection Configuration
+ML_MODEL_CONFIG = {
+    "default_contamination": 0.05,
+    "default_n_estimators": 100,
+    "default_random_state": 42,
+    "numerical_features": [
+        "TotalAmount",
+        "Quantity",
+        "UnitPrice",
+        "CustomerPurchaseFrequency",
+        "CustomerTotalSpend",
+        "AverageTransactionValue",
+        "CountryTransactionCount"
+    ]
+}
+
