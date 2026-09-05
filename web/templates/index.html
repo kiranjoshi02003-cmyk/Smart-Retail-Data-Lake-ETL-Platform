@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Retail Data Lake & ETL Platform</title>
+  
+  <!-- Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Modern Dark Dashboard Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+
+  <div class="app-window">
+    
+    <!-- Top Navigation Bar -->
+    <nav class="top-nav">
+      <div class="brand-group">
+        <div class="brand-logo-icon"><i class="fa-solid fa-server"></i></div>
+        <div class="brand-title">Smart Retail Data Platform</div>
+      </div>
+
+      <div class="nav-tabs">
+        <button class="nav-tab-btn active" onclick="switchTab('dashboard')">
+          <i class="fa-solid fa-chart-line"></i> Dashboard
+        </button>
+        <button class="nav-tab-btn" onclick="switchTab('medallion')">
+          <i class="fa-solid fa-diagram-project"></i> Medallion ETL
+        </button>
+        <button class="nav-tab-btn" onclick="switchTab('sql')">
+          <i class="fa-solid fa-terminal"></i> SQL Studio
+        </button>
+        <button class="nav-tab-btn" onclick="switchTab('inspector')">
+          <i class="fa-solid fa-database"></i> Schema Explorer
+        </button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="run-btn" onclick="triggerEtl(false)">
+          <i class="fa-solid fa-play"></i> Run Pipeline
+        </button>
+        
+        <div class="revenue-pill">
+          <i class="fa-solid fa-vault"></i>
+          <span id="nav-total-revenue">502,723.78 $</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- 2-Column Dashboard Main Area -->
+    <div class="dashboard-grid">
+      
+      <!-- ======================================================== -->
+      <!-- LEFT COLUMN: Sales Throughput Rate & Top Store Spotlight -->
+      <!-- ======================================================== -->
+      <div class="left-col">
+        
+        <!-- Live Rate Curve Chart Card -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">LIVE SALES RATE</span>
+            <span class="rate-value" id="live-rate-badge">2.54k/hr</span>
+          </div>
+          <div class="chart-canvas-box">
+            <canvas id="curveChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Interactive Execution Speed Performance Chips -->
+        <div class="chip-row">
+          <div class="stat-chip" onclick="selectSpeedChip(this, '1.45k/hr', [1.1, 1.3, 1.45, 2.1])" title="Click to view batch 1.45s rate profile">1.45s</div>
+          <div class="stat-chip active" onclick="selectSpeedChip(this, '2.54k/hr', [1.12, 1.45, 1.85, 2.54])" title="Click to view batch 0.50s rate profile">0.50s</div>
+          <div class="stat-chip" onclick="selectSpeedChip(this, '5.22k/hr', [1.0, 2.1, 3.8, 5.22])" title="Click to view batch 5.22s rate profile">5.22s</div>
+          <div class="stat-chip" onclick="selectSpeedChip(this, '1.20k/hr', [0.8, 1.0, 1.15, 1.20])" title="Click to view batch 1.20s rate profile">1.20s</div>
+        </div>
+
+        <!-- Top Retail Store Spotlight Card -->
+        <div class="store-spotlight-card">
+          <div class="spotlight-header">
+            <div class="store-icon"><i class="fa-solid fa-store"></i></div>
+            <div>
+              <div style="font-size: 11px; color: var(--text-muted);">Top Retail Store</div>
+              <div style="font-weight: 700; font-size: 13px;">Smart Retail NY #1</div>
+            </div>
+          </div>
+
+          <div class="store-metrics-row">
+            <div>
+              <div class="metric-mini-title">Gross Sales</div>
+              <div class="metric-mini-val">$124.5k</div>
+            </div>
+            <div>
+              <div class="metric-mini-title">Orders</div>
+              <div class="metric-mini-val">1,184</div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem;">
+            <button class="action-btn-sm" onclick="analyzeTopStore()">Analyze</button>
+            <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 700;">East Region</span>
+          </div>
+        </div>
+
+        <!-- Data Lake Staging Summary -->
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted); padding: 0 4px;">
+          <div>Staging Status: <strong style="color: var(--accent-green);">HEALTHY</strong></div>
+          <div style="display: flex; align-items: center; gap: 4px;">PostgreSQL / SQLite <i class="fa-solid fa-circle-check" style="color: var(--accent-blue);"></i></div>
+        </div>
+
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- CENTER COLUMN: Top Product Spotlight & Main Workspace -->
+      <!-- ======================================================== -->
+      <div class="center-col">
+        
+        <!-- Top Revenue Product Spotlight Hero Card -->
+        <div class="hero-spotlight-card">
+          <div class="hero-product-stage">
+            <div class="product-icon-box">
+              <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div class="product-info-group">
+              <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">TOP SELLING PRODUCT</div>
+              <div class="product-title-text">PRD-1001 Electronics Item</div>
+              <div class="price-swap-row">
+                <span>$7.19k</span>
+                <i class="fa-solid fa-angles-right" style="color: var(--accent-blue); font-size: 1.1rem;"></i>
+                <span>$8.15k</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-action-panel">
+            <div class="margin-pill">38.5% Net Margin</div>
+            <button class="inspect-btn" onclick="inspectTopProduct()">Inspect Schema</button>
+          </div>
+        </div>
+
+        <!-- Statistics Counter Bar -->
+        <div class="stats-counter-bar">
+          <div class="stat-item"><i class="fa-solid fa-cubes"></i> <span id="stat-active-jobs">73 Jobs</span></div>
+          <div class="stat-item"><i class="fa-solid fa-money-bill-wave"></i> <span id="stat-profit-total">$156.8k Profit</span></div>
+          <div class="stat-item"><i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-pink);"></i> <span id="stat-inventory-alerts">42 Reorder Alerts</span></div>
+        </div>
+
+        <!-- DYNAMIC WORKSPACE PANELS -->
+        
+        <!-- Panel 1: Analytics Dashboard -->
+        <div id="view-dashboard" class="workspace-panel active">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-size: 14px; font-weight: 700;">Product Category Performance Mart</h3>
+            <button class="action-btn-sm" style="padding: 4px 10px; font-size: 11px;" onclick="refreshDashboardData()">Refresh Metrics</button>
+          </div>
+          
+          <div class="table-scroll" style="max-height: 320px;">
+            <table class="dark-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Revenue ($)</th>
+                  <th>Profit ($)</th>
+                  <th>Units Sold</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="category-performance-body">
+                <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading category performance...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 2: Medallion Architecture -->
+        <div id="view-medallion" class="workspace-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-size: 14px; font-weight: 700;">Bronze-Silver-Gold Medallion Data Pipeline</h3>
+            <span class="margin-pill" id="etl-status-pill">STATUS: READY</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1rem; text-align: center;">
+            <div style="background: var(--bg-pill); padding: 12px; border-radius: 10px;">
+              <div style="font-size: 10px; color: var(--text-muted);">BRONZE RAW</div>
+              <div style="font-size: 18px; font-weight: 800;" id="m-bronze-sales">1,200</div>
+            </div>
+            <div style="background: var(--bg-pill); padding: 12px; border-radius: 10px;">
+              <div style="font-size: 10px; color: var(--text-muted);">SILVER CLEAN</div>
+              <div style="font-size: 18px; font-weight: 800;" id="m-silver-sales">1,184</div>
+            </div>
+            <div style="background: var(--bg-pill); padding: 12px; border-radius: 10px;">
+              <div style="font-size: 10px; color: var(--text-muted);">GOLD FACT</div>
+              <div style="font-size: 18px; font-weight: 800;" id="m-gold-fact-sales">1,184</div>
+            </div>
+            <div style="background: var(--bg-pill); padding: 12px; border-radius: 10px;">
+              <div style="font-size: 10px; color: var(--text-muted);">GOLD DIM CUST</div>
+              <div style="font-size: 18px; font-weight: 800;" id="m-gold-dim-cust">250</div>
+            </div>
+          </div>
+
+          <div id="terminal-log" style="background: #121324; padding: 12px; border-radius: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan); height: 160px; overflow-y: auto;">
+            <div>[INFO] System initialized. Ready to execute pipeline.</div>
+          </div>
+        </div>
+
+        <!-- Panel 3: SQL Studio -->
+        <div id="view-sql" class="workspace-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 style="font-size: 14px; font-weight: 700;">Live SQL Workbench Studio</h3>
+              <span id="sql-result-count" style="font-size: 11px; color: var(--text-muted); font-weight: normal;"></span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="action-btn-sm" style="padding: 5px 12px; font-size: 11px;" onclick="exportSqlResultsCsv()"><i class="fa-solid fa-download"></i> Export CSV</button>
+              <button class="inspect-btn" style="padding: 5px 16px; font-size: 11px;" onclick="executeCurrentSql()"><i class="fa-solid fa-play"></i> Execute Query</button>
+            </div>
+          </div>
+          
+          <textarea id="sql-editor" class="sql-area" spellcheck="false">
+SELECT 
+    STRFTIME('%Y-%m', transaction_date) AS sales_month,
+    COUNT(DISTINCT transaction_id) AS total_orders,
+    ROUND(SUM(gross_amount), 2) AS gross_revenue,
+    ROUND(SUM(net_profit), 2) AS net_profit
+FROM fact_sales
+GROUP BY sales_month
+ORDER BY sales_month ASC;
+          </textarea>
+
+          <div class="table-scroll" style="max-height: 220px; margin-top: 10px;">
+            <table class="dark-table" id="sql-result-table">
+              <thead id="sql-result-head"><tr><th>Status</th></tr></thead>
+              <tbody id="sql-result-body"><tr><td>Click 'Execute Query' to run SQL statement</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Panel 4: Schema Inspector -->
+        <div id="view-inspector" class="workspace-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-size: 14px; font-weight: 700;">Data Lake Schema Browser</h3>
+            <select id="table-select" class="margin-pill" style="outline: none; cursor: pointer;" onchange="inspectSelectedTable()">
+              <option value="fact_sales">fact_sales (Gold Fact)</option>
+              <option value="dim_customers">dim_customers (Gold Dim)</option>
+              <option value="dim_products">dim_products (Gold Dim)</option>
+              <option value="silver_sales">silver_sales (Silver Clean)</option>
+              <option value="bronze_sales_raw">bronze_sales_raw (Bronze Staging)</option>
+            </select>
+          </div>
+
+          <div class="table-scroll" style="max-height: 260px;">
+            <table class="dark-table">
+              <thead><tr id="inspector-table-head"><th>Loading...</th></tr></thead>
+              <tbody id="inspector-table-body"><tr><td>Select a table to view contents</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- App Scripts -->
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/sql_workbench.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

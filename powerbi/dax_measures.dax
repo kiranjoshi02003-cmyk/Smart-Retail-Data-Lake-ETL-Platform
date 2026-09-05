@@ -1,0 +1,76 @@
+// ============================================================
+// POWER BI DAX MEASURES - SMART RETAIL ANALYTICS PLATFORM
+// ============================================================
+
+// --- REVENUE & PROFIT FINANCIAL MEASURES ---
+
+Total Sales = 
+SUM(fact_sales[gross_amount])
+
+Total COGS = 
+SUM(fact_sales[cogs])
+
+Total Net Profit = 
+SUM(fact_sales[net_profit])
+
+Profit Margin % = 
+DIVIDE([Total Net Profit], [Total Sales], 0) * 100
+
+Total Units Sold = 
+SUM(fact_sales[quantity])
+
+Total Transactions = 
+DISTINCTCOUNT(fact_sales[transaction_id])
+
+Average Order Value (AOV) = 
+DIVIDE([Total Sales], [Total Transactions], 0)
+
+// --- TIME INTELLIGENCE & MOM / YTD MEASURES ---
+
+Sales YTD = 
+TOTALYTD([Total Sales], 'Dim_Date'[Date])
+
+Sales Previous Month = 
+CALCULATE([Total Sales], DATEADD('Dim_Date'[Date], -1, MONTH))
+
+MoM Sales Growth % = 
+VAR PrevSales = [Sales Previous Month]
+RETURN
+DIVIDE([Total Sales] - PrevSales, PrevSales, 0) * 100
+
+// --- INVENTORY & SUPPLY CHAIN MEASURES ---
+
+Total Stock On Hand = 
+SUM(fact_inventory_snapshot[stock_on_hand])
+
+Total Inventory Valuation = 
+SUM(fact_inventory_snapshot[inventory_valuation])
+
+Reorder Alert Count = 
+CALCULATE(
+    COUNTROWS(fact_inventory_snapshot),
+    fact_inventory_snapshot[reorder_status] = "REORDER_NEEDED"
+)
+
+Stock Turnover Ratio = 
+DIVIDE([Total COGS], [Total Inventory Valuation], 0)
+
+// --- CUSTOMER & RFM MEASURES ---
+
+Active Customer Count = 
+DISTINCTCOUNT(fact_sales[customer_id])
+
+Avg Customer Lifetime Value (CLV) = 
+AVERAGE(dim_customers[total_spend])
+
+Champions Count = 
+CALCULATE(
+    COUNTROWS(dim_customers),
+    dim_customers[rfm_segment] = "Champions"
+)
+
+At Risk Customers = 
+CALCULATE(
+    COUNTROWS(dim_customers),
+    dim_customers[rfm_segment] = "At Risk"
+)
